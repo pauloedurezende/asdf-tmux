@@ -37,11 +37,92 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# URL format for tmux releases
 	url="$GH_REPO/releases/download/${version}/tmux-${version}.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+}
+
+check_libevent_dependency() {
+	if ! pkg-config --exists libevent || ! pkg-config --exists libevent_core; then
+		fail "Missing dependency: libevent. Please install libevent development package."
+	fi
+}
+
+install_dependencies() {
+	local os_name
+	os_name="$(uname -s)"
+
+	# Linux systems
+	if [[ "$os_name" == "Linux" ]]; then
+		# Debian/Ubuntu based distributions
+		if [[ -f /etc/debian_version ]] || [[ -f /etc/lsb-release && $(grep -q "Ubuntu\|Debian" /etc/lsb-release) ]]; then
+			echo "* Detected Debian/Ubuntu-based system"
+
+			if command -v sudo >/dev/null 2>&1; then
+				echo "* Installing dependencies using sudo..."
+				sudo apt-get update -q
+				sudo apt-get install -y libevent-dev libncurses-dev build-essential bison pkg-config autoconf automake
+				echo "* Dependencies installed successfully"
+				return 0
+			fi
+
+			echo "* sudo not available, checking if dependencies are already installed"
+			check_libevent_dependency
+			return 0
+		fi
+
+		echo "* Non-Debian/Ubuntu Linux detected"
+		echo "* Checking if dependencies are already installed"
+		check_libevent_dependency
+		return 0
+	fi
+
+	# macOS systems
+	if [[ "$os_name" == "Darwin" ]]; then
+		echo "* Detected macOS"
+
+		if command -v brew >/dev/null 2>&1; then
+			echo "* Installing dependencies using Homebrew..."
+			brew install libevent ncurses automake pkg-config utf8proc
+			echo "* Dependencies installed successfully"
+			return 0
+		fi
+
+		echo "* Homebrew not detected, checking if dependencies are already installed"
+		check_libevent_dependency
+		return 0
+	fi
+
+	# Unsupported OS
+	echo "* Unsupported operating system: $os_name"
+	echo "* Checking if dependencies are already installed"
+	check_libevent_dependency
+}
+
+configure_tmux() {
+	local install_path="$1"
+	local version="$2"
+	local os_name
+	os_name="$(uname -s)"
+
+	if [[ "$os_name" == "Darwin" ]]; then
+		echo "* Configuring tmux on macOS with Unicode support..."
+
+		if pkg-config --exists utf8proc; then
+			echo "* Enabling utf8proc support"
+			./configure --prefix="$install_path" --enable-utf8proc || fail "Could not configure $TOOL_NAME $version"
+			return 0
+		fi
+
+		echo "* utf8proc not found, disabling utf8proc support"
+		./configure --prefix="$install_path" --disable-utf8proc || fail "Could not configure $TOOL_NAME $version"
+		return 0
+	fi
+
+	# Default configuration for non-macOS systems
+	echo "* Configuring tmux..."
+	./configure --prefix="$install_path" || fail "Could not configure $TOOL_NAME $version"
 }
 
 install_version() {
@@ -57,40 +138,18 @@ install_version() {
 
 	(
 		echo "* Installing $TOOL_NAME $version..."
-
-		# Create bin directory
 		mkdir -p "$bin_path"
-
+		install_dependencies
 		cd "$build_path"
+		configure_tmux "$install_path" "$version"
 
-		# Verificar se estamos no macOS
-		if [[ "$(uname -s)" == "Darwin" ]]; then
-			# No macOS, habilitar utf8proc para melhor suporte a Unicode
-			echo "* Detected macOS, enabling utf8proc support..."
-
-			# Verificar se utf8proc está instalado
-			if ! pkg-config --exists utf8proc; then
-				echo "* Warning: utf8proc not found. You may need to install it with: brew install utf8proc"
-				echo "* Continuing with --disable-utf8proc option..."
-				./configure --prefix="$install_path" --disable-utf8proc || fail "Could not configure $TOOL_NAME $version"
-			else
-				echo "* utf8proc found, configuring with --enable-utf8proc..."
-				./configure --prefix="$install_path" --enable-utf8proc || fail "Could not configure $TOOL_NAME $version"
-			fi
-		else
-			# Em outros sistemas, usar configuração padrão
-			./configure --prefix="$install_path" || fail "Could not configure $TOOL_NAME $version"
-		fi
-
-		# Build tmux
-		echo "* Running make..."
+		echo "* Building tmux..."
 		make || fail "Could not build $TOOL_NAME $version"
 
-		# Install tmux
-		echo "* Running make install..."
+		echo "* Installing tmux..."
 		make install || fail "Could not install $TOOL_NAME $version"
 
-		# Test installation
+		# Verify installation
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
