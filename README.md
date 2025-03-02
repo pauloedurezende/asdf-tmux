@@ -15,10 +15,41 @@
 
 # Dependencies
 
-**TODO: adapt this section**
+This plugin automatically attempts to install required dependencies during the installation process. However, if you encounter issues, you may need to install them manually.
 
-- `bash`, `curl`, `tar`, and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html).
-- `SOME_ENV_VAR`: set this environment variable in your shell config to load the correct version of tool x.
+## Required dependencies
+
+- libevent (development files)
+- ncurses (development files)
+- build tools (gcc, make, etc.)
+- autoconf
+- automake
+- pkg-config
+
+## Platform-specific installation commands
+
+If automatic installation fails, you can install the dependencies manually using the following commands:
+
+### Ubuntu/Debian
+```bash
+sudo apt-get update
+sudo apt-get install -y libevent-dev libncurses-dev build-essential bison pkg-config autoconf automake
+```
+
+### macOS (with Homebrew)
+```bash
+brew install libevent ncurses automake pkg-config utf8proc
+```
+
+### Fedora/CentOS/RHEL
+```
+sudo dnf install libevent-devel ncurses-devel automake bison pkg-config gcc make
+```
+
+### FreeBSD
+```bash
+pkg install libevent ncurses autoconf automake pkgconf
+```
 
 # Install
 
