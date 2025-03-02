@@ -43,7 +43,7 @@ asdf install tmux latest
 asdf global tmux latest
 
 # Now tmux commands are available
-tmux --help
+tmux -V
 ```
 
 Check [asdf](https://github.com/asdf-vm/asdf) readme for more instructions on how to
