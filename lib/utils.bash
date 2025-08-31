@@ -52,6 +52,11 @@ check_dependencies() {
 		missing_deps+=("libncurses-dev")
 	fi
 
+	# Check for utf8proc on macOS (required for Unicode support)
+	if [[ "$OSTYPE" == "darwin"* ]] && ! pkg-config --exists libutf8proc 2>/dev/null && ! [ -f /usr/local/include/utf8proc.h ] && ! [ -f /opt/homebrew/include/utf8proc.h ]; then
+		missing_deps+=("utf8proc")
+	fi
+
 	if [ ${#missing_deps[@]} -ne 0 ]; then
 		echo "Error: Missing required dependencies for building tmux:"
 		printf " - %s\n" "${missing_deps[@]}"
@@ -63,7 +68,7 @@ check_dependencies() {
 		echo "  sudo apt-get install build-essential libevent-dev libncurses5-dev pkg-config"
 		echo
 		echo "On macOS with Homebrew:"
-		echo "  brew install libevent ncurses pkg-config"
+		echo "  brew install libevent ncurses pkg-config utf8proc"
 		echo
 		echo "On CentOS/RHEL/Fedora:"
 		echo "  sudo yum install gcc make libevent-devel ncurses-devel pkgconfig"
@@ -94,31 +99,30 @@ compile_source() {
 	temp_build_dir=$(mktemp -d)
 
 	echo "* Configuring tmux build..."
-	(
-		cd "$source_dir"
-		./configure --prefix="$install_path" || {
+	# On macOS, tmux requires explicit UTF-8 configuration
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		if ! (cd "$source_dir" && ./configure --prefix="$install_path" --enable-utf8proc); then
 			cleanup_temp_files "$temp_build_dir"
 			fail "Failed to configure tmux build"
-		}
-	)
+		fi
+	else
+		if ! (cd "$source_dir" && ./configure --prefix="$install_path"); then
+			cleanup_temp_files "$temp_build_dir"
+			fail "Failed to configure tmux build"
+		fi
+	fi
 
 	echo "* Compiling tmux (this may take a few minutes)..."
-	(
-		cd "$source_dir"
-		make || {
-			cleanup_temp_files "$temp_build_dir"
-			fail "Failed to compile tmux"
-		}
-	)
+	if ! (cd "$source_dir" && make); then
+		cleanup_temp_files "$temp_build_dir"
+		fail "Failed to compile tmux"
+	fi
 
 	echo "* Installing tmux to $install_path..."
-	(
-		cd "$source_dir"
-		make install || {
-			cleanup_temp_files "$temp_build_dir"
-			fail "Failed to install tmux"
-		}
-	)
+	if ! (cd "$source_dir" && make install); then
+		cleanup_temp_files "$temp_build_dir"
+		fail "Failed to install tmux"
+	fi
 
 	cleanup_temp_files "$temp_build_dir"
 	echo "✓ tmux compilation and installation completed successfully"
