@@ -16,6 +16,20 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Install build dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libevent-dev libncurses5-dev pkg-config
+          
+      - name: Install build dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install libevent ncurses pkg-config utf8proc
+          
       - name: asdf_plugin_test
         uses: asdf-vm/actions/plugin-test@v3
         with:
