@@ -4,6 +4,8 @@
 
 [tmux](https://github.com/tmux/tmux/wiki) plugin for the [asdf version manager](https://asdf-vm.com).
 
+A terminal multiplexer that allows you to create, access and control multiple terminals from a single screen.
+
 </div>
 
 # Contents
@@ -15,10 +17,30 @@
 
 # Dependencies
 
-**TODO: adapt this section**
+- **Build tools**: gcc, make, pkg-config - Required for compiling tmux from source code
+- **Libraries**: libevent-dev, libncurses-dev - Development headers for tmux dependencies
+- **macOS additional**: utf8proc - Required for UTF-8 support on macOS
+- **Basic tools**: bash, curl, tar, git and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html)
 
-- `bash`, `curl`, `tar`, and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html).
-- `SOME_ENV_VAR`: set this environment variable in your shell config to load the correct version of tool x.
+**Note:** This plugin compiles tmux from source code, which may take a few minutes depending on your system. The plugin will automatically check and guide you through installing missing dependencies.
+
+## Installing Dependencies
+
+**On Debian/Ubuntu:**
+```shell
+sudo apt-get update
+sudo apt-get install build-essential libevent-dev libncurses5-dev pkg-config
+```
+
+**On macOS with Homebrew:**
+```shell
+brew install libevent ncurses pkg-config utf8proc
+```
+
+**On CentOS/RHEL/Fedora:**
+```shell
+sudo dnf install gcc make libevent-devel ncurses-devel pkgconfig
+```
 
 # Install
 
@@ -39,7 +61,10 @@ asdf list-all tmux
 # Install specific version
 asdf install tmux latest
 
-# Set a version globally (on your ~/.tool-versions file)
+# Show installed versions
+asdf list tmux
+
+# Set a version globally (in your home ~/.tool-versions file)
 asdf global tmux latest
 
 # Now tmux commands are available
