@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for tmux.
 GH_REPO="https://github.com/tmux/tmux"
 TOOL_NAME="tmux"
 TOOL_TEST="tmux -V"
@@ -14,7 +13,6 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if tmux is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
 	curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
 fi
@@ -27,32 +25,26 @@ sort_versions() {
 check_dependencies() {
 	local missing_deps=()
 
-	# Check for gcc compiler
 	if ! command -v gcc >/dev/null 2>&1; then
 		missing_deps+=("gcc")
 	fi
 
-	# Check for make
 	if ! command -v make >/dev/null 2>&1; then
 		missing_deps+=("make")
 	fi
 
-	# Check for pkg-config (needed to find libraries)
 	if ! command -v pkg-config >/dev/null 2>&1; then
 		missing_deps+=("pkg-config")
 	fi
 
-	# Check for libevent development headers
 	if ! pkg-config --exists libevent 2>/dev/null && ! [ -f /usr/include/event.h ] && ! [ -f /usr/local/include/event.h ]; then
 		missing_deps+=("libevent-dev")
 	fi
 
-	# Check for ncurses development headers
 	if ! pkg-config --exists ncurses 2>/dev/null && ! [ -f /usr/include/ncurses.h ] && ! [ -f /usr/local/include/ncurses.h ]; then
 		missing_deps+=("libncurses-dev")
 	fi
 
-	# Check for utf8proc on macOS (required for Unicode support)
 	if [[ "$OSTYPE" == "darwin"* ]] && ! pkg-config --exists libutf8proc 2>/dev/null && ! [ -f /usr/local/include/utf8proc.h ] && ! [ -f /opt/homebrew/include/utf8proc.h ]; then
 		missing_deps+=("utf8proc")
 	fi
@@ -72,7 +64,6 @@ check_dependencies() {
 		echo
 		echo "On CentOS/RHEL/Fedora:"
 		echo "  sudo yum install gcc make libevent-devel ncurses-devel pkgconfig"
-		echo "  # OR for newer versions:"
 		echo "  sudo dnf install gcc make libevent-devel ncurses-devel pkgconfig"
 		echo
 		return 1
@@ -95,7 +86,6 @@ compile_source() {
 	local install_path="$2"
 	local temp_build_dir
 
-	# Create a temporary build directory
 	temp_build_dir=$(mktemp -d)
 
 	echo "* Configuring tmux build..."
@@ -131,12 +121,10 @@ compile_source() {
 list_github_tags() {
 	git ls-remote --tags --refs "$GH_REPO" |
 		grep -o 'refs/tags/.*' | cut -d/ -f3- |
-		sed 's/^v//' # NOTE: You might want to adapt this sed to remove non-version strings from tags
+		sed 's/^v//'
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if tmux has other means of determining installable versions.
 	list_github_tags
 }
 
@@ -145,7 +133,6 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# Use official GitHub releases URL for tmux
 	url="$GH_REPO/releases/download/${version}/tmux-${version}.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
