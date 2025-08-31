@@ -14,7 +14,7 @@ Make sure you have all dependencies installed before testing. See the [Dependenc
 ## Testing Locally
 
 ```shell
-asdf plugin test tmux https://github.com/pauloedurezende/asdf-tmux.git --asdf-tool-version 3.5 "tmux -V"
+asdf plugin test tmux <path-to-plugin> --asdf-tool-version 3.5 "tmux -V"
 ```
 
 **Note:** Since this plugin compiles tmux from source code, the installation process may take several minutes depending on your system performance and the availability of build dependencies.
