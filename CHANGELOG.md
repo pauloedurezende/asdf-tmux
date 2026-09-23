@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/pauloedurezende/asdf-tmux/compare/v1.0.0...v1.0.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* enable jemalloc for tmux builds on macOS ([#10](https://github.com/pauloedurezende/asdf-tmux/issues/10)) ([24ffc7b](https://github.com/pauloedurezende/asdf-tmux/commit/24ffc7b4951d1ced6fd3144ad6d290687b6130d8))
+
 ## 1.0.0 (2025-08-31)
 
 
