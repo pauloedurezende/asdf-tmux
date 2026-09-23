@@ -22,7 +22,39 @@ sort_versions() {
 		LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
+configure_supports_jemalloc() {
+	local source_dir="$1"
+	local configure_help
+
+	if ! configure_help=$(cd "$source_dir" && ./configure --help 2>/dev/null); then
+		return 1
+	fi
+
+	[[ "$configure_help" == *"--enable-jemalloc"* ]]
+}
+
+jemalloc_is_available() {
+	if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists jemalloc 2>/dev/null; then
+		return 0
+	fi
+
+	local include_path
+	for include_path in \
+		/usr/local/include/jemalloc/jemalloc.h \
+		/opt/homebrew/include/jemalloc/jemalloc.h \
+		/usr/local/opt/jemalloc/include/jemalloc/jemalloc.h \
+		/opt/homebrew/opt/jemalloc/include/jemalloc/jemalloc.h; do
+		if [ -f "$include_path" ]; then
+			return 0
+		fi
+	done
+
+	return 1
+}
+
 check_dependencies() {
+	local source_dir="${1:-}"
+	local missing_jemalloc=0
 	local missing_deps=()
 
 	if ! command -v gcc >/dev/null 2>&1; then
@@ -49,6 +81,11 @@ check_dependencies() {
 		missing_deps+=("utf8proc")
 	fi
 
+	if [[ "$OSTYPE" == "darwin"* ]] && [ -n "$source_dir" ] && configure_supports_jemalloc "$source_dir" && ! jemalloc_is_available; then
+		missing_deps+=("jemalloc")
+		missing_jemalloc=1
+	fi
+
 	if [ ${#missing_deps[@]} -ne 0 ]; then
 		echo "Error: Missing required dependencies for building tmux:"
 		printf " - %s\n" "${missing_deps[@]}"
@@ -60,7 +97,11 @@ check_dependencies() {
 		echo "  sudo apt-get install build-essential libevent-dev libncurses5-dev pkg-config"
 		echo
 		echo "On macOS with Homebrew:"
-		echo "  brew install libevent ncurses pkg-config utf8proc"
+		if [ "$missing_jemalloc" -eq 1 ]; then
+			echo "  brew install libevent ncurses pkg-config utf8proc jemalloc"
+		else
+			echo "  brew install libevent ncurses pkg-config utf8proc"
+		fi
 		echo
 		echo "On CentOS/RHEL/Fedora:"
 		echo "  sudo yum install gcc make libevent-devel ncurses-devel pkgconfig"
@@ -85,21 +126,22 @@ compile_source() {
 	local source_dir="$1"
 	local install_path="$2"
 	local temp_build_dir
+	local configure_args=(--prefix="$install_path")
 
 	temp_build_dir=$(mktemp -d)
 
 	echo "* Configuring tmux build..."
 	# On macOS, tmux requires explicit UTF-8 configuration
 	if [[ "$OSTYPE" == "darwin"* ]]; then
-		if ! (cd "$source_dir" && ./configure --prefix="$install_path" --enable-utf8proc); then
-			cleanup_temp_files "$temp_build_dir"
-			fail "Failed to configure tmux build"
+		configure_args+=(--enable-utf8proc)
+		if configure_supports_jemalloc "$source_dir"; then
+			configure_args+=(--enable-jemalloc)
 		fi
-	else
-		if ! (cd "$source_dir" && ./configure --prefix="$install_path"); then
-			cleanup_temp_files "$temp_build_dir"
-			fail "Failed to configure tmux build"
-		fi
+	fi
+
+	if ! (cd "$source_dir" && ./configure "${configure_args[@]}"); then
+		cleanup_temp_files "$temp_build_dir"
+		fail "Failed to configure tmux build"
 	fi
 
 	echo "* Compiling tmux (this may take a few minutes)..."
@@ -150,7 +192,7 @@ install_version() {
 
 	# Check dependencies before attempting to build
 	echo "* Checking build dependencies..."
-	check_dependencies || fail "Dependencies check failed"
+	check_dependencies "$ASDF_DOWNLOAD_PATH" || fail "Dependencies check failed"
 
 	# Create install directory
 	mkdir -p "$install_path"

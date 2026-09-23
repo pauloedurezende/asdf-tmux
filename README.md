@@ -19,7 +19,7 @@ A terminal multiplexer that allows you to create, access and control multiple te
 
 - **Build tools**: gcc, make, pkg-config - Required for compiling tmux from source code
 - **Libraries**: libevent-dev, libncurses-dev - Development headers for tmux dependencies
-- **macOS additional**: utf8proc - Required for UTF-8 support on macOS
+- **macOS additional**: utf8proc, jemalloc - Required for UTF-8 support and supported tmux versions on macOS
 - **Basic tools**: bash, curl, tar, git and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html)
 
 **Note:** This plugin compiles tmux from source code, which may take a few minutes depending on your system. The plugin will automatically check and guide you through installing missing dependencies.
@@ -34,7 +34,7 @@ sudo apt-get install build-essential libevent-dev libncurses5-dev pkg-config
 
 **On macOS with Homebrew:**
 ```shell
-brew install libevent ncurses pkg-config utf8proc
+brew install libevent ncurses pkg-config utf8proc jemalloc
 ```
 
 **On CentOS/RHEL/Fedora:**
